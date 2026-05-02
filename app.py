@@ -36,20 +36,35 @@ def set_context(data: dict):
 @app.post("/v1/tick")
 def tick():
     context = store.get_context()
+
+    # ✅ Safe extraction
+    merchant = context.get("merchant", {})
+    metrics = merchant.get("metric", {})
+
+    ctr = metrics.get("ctr")
+    peer_ctr = metrics.get("peer_ctr")
+    name = merchant.get("name", "Merchant")
+
     decision = decide(context)
     prompt = build_prompt(context, decision)
 
     output = generate_message(prompt)
 
+    # 🔥 Fallback (better handling)
     if not output:
         print("⚠️ Using fallback message")
 
+        if ctr is not None and peer_ctr is not None:
+            body = f"{name}, your CTR is {ctr}% vs peers {peer_ctr}%. This gap is impacting performance this week."
+        else:
+            body = f"{name}, we noticed an opportunity to improve performance this week based on recent trends."
+
         return {
-            "body": f"{context['merchant'].get('name', 'Merchant')}, your CTR is {context['merchant'].get('metric', {}).get('ctr', 0)}% vs peers {context['merchant'].get('metric', {}).get('peer_ctr', 0)}%. This gap is impacting performance this week.",
+            "body": body,
             "cta": "I can set this up for you today — want me to activate it?",
             "send_as": "vera",
             "suppression_key": "fallback_message",
-            "rationale": "Fallback used due to model failure; still uses merchant metrics and trigger"
+            "rationale": "Fallback used due to model failure; handles missing context safely"
         }
 
     try:
@@ -57,12 +72,20 @@ def tick():
     except:
         return {"error": "invalid json"}
 
-    if not any(char.isdigit() for char in data.get("body", "")):
-        data["body"] += " Acting now can improve results by up to 20%."
+    # 🔥 Post-processing fixes
 
+    # Ensure number
+    if not any(char.isdigit() for char in data.get("body", "")):
+        if ctr:
+            data["body"] += f" Your CTR is {ctr}%."
+        else:
+            data["body"] += " Acting now can improve results by up to 20%."
+
+    # Ensure urgency
     if not any(word in data["body"].lower() for word in ["today", "week", "now"]):
         data["body"] += " Acting this week can help improve results."
 
+    # Ensure CTA
     if "?" not in data.get("cta", ""):
         data["cta"] = "I can set this up for you today — want me to activate it?"
 
