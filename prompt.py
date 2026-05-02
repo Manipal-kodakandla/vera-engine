@@ -1,4 +1,3 @@
-# prompt.py
 
 def build_prompt(context, decision):
     category = context["category"]
@@ -24,10 +23,16 @@ Urgency: {decision["urgency"]}
 Task:
 Generate a WhatsApp message.
 
+CRITICAL TOP-TIER REQUIREMENTS:
+- MUST combine trigger insight WITH merchant performance data
+- NEVER mention metrics OR trigger alone - always connect both
+- Example: "CTR is 2.1% vs 3.0% peers AND research shows 27% improvement"
+- Show the reasoning chain: what changed + why it matters + what to do
+
 STRICT REQUIREMENTS (DO NOT VIOLATE):
 - MUST include at least ONE number or % (from context)
 - MUST mention WHY NOW explicitly (e.g., "this week", "right now")
-- MUST reference merchant performance if available
+- MUST reference merchant performance AND trigger insight together
 - MUST include urgency wording ("this week", "today", "now")
 - CTA MUST be actionable (e.g., "I can set this up for you today — want me to activate it?")
 - DO NOT use weak phrases like "explore", "consider"
@@ -36,8 +41,8 @@ STRICT REQUIREMENTS (DO NOT VIOLATE):
 BAD EXAMPLE (DO NOT DO):
 "Would you like to explore strategies to improve performance?"
 
-GOOD EXAMPLE:
-"Your CTR is 2.1% vs 3.0% peers — this gap is costing traffic this week. I can set up a campaign today to recover it."
+TOP-TIER EXAMPLE:
+"Dr Meera Clinic, your CTR is 2.1% vs peers 3.0% — this gap is impacting patient traffic this week. WhatsApp recall messages improve repeat visits by 27%, which can help recover this quickly."
 
 IMPORTANT:
 Every message MUST include:
