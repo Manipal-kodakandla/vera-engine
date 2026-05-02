@@ -67,3 +67,27 @@ def tick():
         data["cta"] = "I can set this up for you today — want me to activate it?"
 
     return data
+
+@app.post("/v1/reply")
+def reply(data: dict):
+    msg = data.get("message", "").lower()
+
+    if "yes" in msg:
+        return {
+            "body": "Great — I’ll set this up for you today and share results shortly.",
+            "cta": "Done",
+            "send_as": "vera"
+        }
+
+    if "no" in msg:
+        return {
+            "body": "No problem — I’ll pause this for now. Let me know anytime.",
+            "cta": "Okay",
+            "send_as": "vera"
+        }
+
+    return {
+        "body": "Got it — can you share more details so I can help better?",
+        "cta": "Reply",
+        "send_as": "vera"
+    }
