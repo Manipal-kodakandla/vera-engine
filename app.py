@@ -12,7 +12,6 @@ def health():
     return {"status": "ok"}
 
 
-# ✅ METADATA
 @app.get("/v1/metadata")
 def metadata():
     return {
@@ -20,8 +19,6 @@ def metadata():
         "version": "1.0"
     }
 
-
-# ✅ CONTEXT
 @app.post("/v1/context")
 def set_context(data: dict):
     payload = data.get("payload", {})
@@ -50,21 +47,32 @@ def tick():
 
     output = generate_message(prompt)
 
-    # 🔥 Fallback (better handling)
     if not output:
         print("⚠️ Using fallback message")
-
-        if ctr is not None and peer_ctr is not None:
+        
+        # Get trigger details for signal combination
+        trigger_detail = context.get("trigger", {}).get("detail", "")
+        trigger_kind = context.get("trigger", {}).get("kind", "")
+        
+        if ctr is not None and peer_ctr is not None and trigger_detail:
+            body = f"{name}, your CTR is {ctr}% vs peers {peer_ctr}% - {trigger_detail}. Acting this week can recover this gap."
+            suppression_key = f"ctr_gap_{trigger_kind}"
+            rationale = f"Combines performance gap ({ctr}% vs {peer_ctr}%) with trigger insight ({trigger_kind}) to drive immediate action"
+        elif ctr is not None and peer_ctr is not None:
             body = f"{name}, your CTR is {ctr}% vs peers {peer_ctr}%. This gap is impacting performance this week."
+            suppression_key = "ctr_gap_only"
+            rationale = f"Uses performance gap ({ctr}% vs {peer_ctr}%) to drive action"
         else:
             body = f"{name}, we noticed an opportunity to improve performance this week based on recent trends."
+            suppression_key = "general_opportunity"
+            rationale = "General engagement opportunity based on recent trends"
 
         return {
             "body": body,
             "cta": "I can set this up for you today — want me to activate it?",
             "send_as": "vera",
-            "suppression_key": "fallback_message",
-            "rationale": "Fallback used due to model failure; handles missing context safely"
+            "suppression_key": suppression_key,
+            "rationale": rationale
         }
 
     try:
@@ -72,7 +80,34 @@ def tick():
     except:
         return {"error": "invalid json"}
 
-    # 🔥 Post-processing fixes
+    # 🔥 Post-processing fixes with signal combination
+
+    # Generate specific suppression key and rationale
+    trigger_kind = context.get("trigger", {}).get("kind", "")
+    trigger_detail = context.get("trigger", {}).get("detail", "")
+    
+    # Smart suppression key generation
+    suppression_parts = []
+    if ctr and peer_ctr:
+        suppression_parts.append("ctr_gap")
+    if trigger_kind:
+        suppression_parts.append(trigger_kind)
+    
+    data["suppression_key"] = "_".join(suppression_parts) if suppression_parts else "general_message"
+    
+    # Generate meaningful rationale
+    rationale_parts = []
+    if ctr and peer_ctr:
+        rationale_parts.append(f"performance gap ({ctr}% vs {peer_ctr}%)")
+    if trigger_detail:
+        rationale_parts.append(f"trigger insight ({trigger_kind})")
+    
+    if len(rationale_parts) > 1:
+        data["rationale"] = f"Combines {', '.join(rationale_parts)} to drive immediate action"
+    elif rationale_parts:
+        data["rationale"] = f"Uses {rationale_parts[0]} to drive action"
+    else:
+        data["rationale"] = "General engagement message"
 
     # Ensure number
     if not any(char.isdigit() for char in data.get("body", "")):
