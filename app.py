@@ -26,10 +26,14 @@ def metadata():
 
 @app.post("/v1/context")
 def set_context(data: dict):
-    payload = data.get("payload", {})
+    payload = data.get("payload", data)
 
     store.category = payload.get("category", {})
-    store.merchant = payload.get("identity") or payload.get("merchant", {})
+    store.merchant = (
+        payload.get("identity")
+        or payload.get("merchant")
+        or {}
+    )
     store.trigger = payload.get("trigger", {})
     store.customer = payload.get("customer", None)
 
@@ -38,8 +42,35 @@ def set_context(data: dict):
     return {"accepted": True}
 
 @app.post("/v1/tick")
-def tick():
-    context = store.get_context()
+def tick(data: dict = None):
+    # 🔥 ALWAYS rebuild context from input if present
+    if data:
+        payload = data.get("payload", data)
+
+        category = payload.get("category", {})
+        merchant = (
+            payload.get("identity")
+            or payload.get("merchant")
+            or {}
+        )
+        trigger = payload.get("trigger", {})
+        customer = payload.get("customer", None)
+
+    else:
+        # fallback to store (if /v1/context was called)
+        stored = store.get_context()
+        category = stored.get("category", {})
+        merchant = stored.get("merchant", {})
+        trigger = stored.get("trigger", {})
+        customer = stored.get("customer", None)
+
+    # 🔥 Build context locally (DO NOT rely on store)
+    context = {
+        "category": category,
+        "merchant": merchant,
+        "trigger": trigger,
+        "customer": customer
+    }
 
     # ✅ Robust extraction — handle both "identity" and "merchant" keys
     merchant = context.get("merchant", {})
@@ -64,6 +95,8 @@ def tick():
         context_word = "performance"
 
     logger.info(f"Tick - name={name}, ctr={ctr}, peer_ctr={peer_ctr}, trigger={trigger_kind}, category={category_name}")
+    print("DEBUG:", context)
+    print("CTR:", ctr, "PEER:", peer_ctr)
 
     # 🔥 STEP 1: Determine performance mode
     if ctr is not None and peer_ctr is not None:
