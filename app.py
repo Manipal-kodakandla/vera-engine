@@ -48,7 +48,7 @@ def tick():
     output = generate_message(prompt)
 
     if not output:
-        print("⚠️ Using fallback message")
+        print("Using fallback message")
         
         # Get trigger details for signal combination
         trigger_detail = context.get("trigger", {}).get("detail", "")
