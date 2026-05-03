@@ -11,6 +11,19 @@ logger = logging.getLogger("vera")
 
 app = FastAPI()
 store = Store()
+@app.get("/")
+def root():
+    return {
+        "message": "Vera Message Engine is running",
+        "endpoints": [
+            "/v1/healthz",
+            "/v1/metadata",
+            "/v1/context",
+            "/v1/tick",
+            "/v1/reply"
+        ]
+    }
+      
 @app.get("/v1/healthz")
 def health():
     return {"status": "ok"}
